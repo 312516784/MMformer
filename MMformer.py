@@ -11,6 +11,7 @@ from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+import random
 import joblib
 import math
 import copy
@@ -47,6 +48,7 @@ class Config:
     mm_feature_size = 7
     batch_size_mmformer = 128
     num_mc_samples = 1000       # MC次数
+    seeds = 2025
     
     mm_max_norn = 1
     meta_batch_size = 128       # 每次元更新基于多少个任务（城市）
@@ -62,15 +64,24 @@ class Config:
     lr_scheduler_patience = 10  # Patience value for the learning rate scheduler
     weight_decay = 0.02        # Optimizer Weight Decay
     patience = 20              # Patience
-    mm_num_epochs = 700        # number of epochs
+    mm_num_epochs = 100        # number of epochs
     
     #final_div_factor=configs.outer_lr_max/configs.outer_lr_min
     
     epsilon = 1
-    #min_actual = 1e-4
+
     #Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 configs = Config()
+
+torch.manual_seed(configs.seeds)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(configs.seeds)
+    torch.cuda.manual_seed_all(configs.seeds)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+np.random.seed(configs.seeds)
+random.seed(configs.seeds)
 
 class HybridLoss(nn.Module):
     def __init__(self, alpha=0.5, epsilon=1):
@@ -828,9 +839,9 @@ def visualize_mmformer_predictions(mmformer_model, test_loader, scaler, configs,
     test_targets = test_targets.cpu().numpy()
     test_outputs = predictions.cpu().numpy()
     
-    np.save('MMformer_preds.npy', test_outputs)
-    np.save('MMformer_targets.npy', test_targets)
-    np.save('MMformer_inputs.npy', test_inputs)
+    np.save('MMformer_preds_meta.npy', test_outputs)
+    np.save('MMformer_targets_meta.npy', test_targets)
+    np.save('MMformer_inputs_meta.npy', test_inputs)
     
     # 使用传入的scaler进行逆标准化
     test_inputs_inv = scaler.inverse_transform(test_inputs.reshape(-1, configs.mm_feature_size)).reshape(test_inputs.shape)
